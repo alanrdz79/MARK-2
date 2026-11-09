@@ -1,0 +1,688 @@
+{
+  "fee_rate": 0.00018,
+  "fee_source": ".env MAKER_FEE_RATE",
+  "alpha": 0.05,
+  "bootstrap_B": 2000,
+  "symbols": [
+    {
+      "symbol": "1000PEPEUSDT",
+      "n_cycles": 159,
+      "span_days": 1.4611147153736264,
+      "net_total_usdt": 1.0236,
+      "net_per_cycle": 0.0064377358490566045,
+      "net_per_cycle_ci": [
+        0.005628915094339623,
+        0.0072304088050314476
+      ],
+      "n_effective": 159.0,
+      "implied_fee_rate_median": 0.00019631962861668713,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 0.24816358943816474,
+      "fee_to_gross": 1.063607336634259,
+      "fee_to_gross_ci": [
+        1.0312618545890926,
+        1.1352347705035457
+      ],
+      "breakeven_fee_rate": -0.009922414472830222,
+      "breakeven_over_fee": -55.12452484905678,
+      "orientation_anomaly_share": 0.39622641509433965,
+      "inter_arrival_s": {
+        "p25": 128.06834322214127,
+        "p50": 329.42906725406647,
+        "p75": 665.1509617567062
+      },
+      "fill_consistency": null,
+      "fill_consistency_null": null,
+      "fill_consistency_p": null,
+      "hourly_rho_vs_range": null,
+      "hourly_rho_p": null,
+      "fano_hourly": 4.222641509433961,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 2.5384996426357005,
+      "findings": [
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "La comisión puede consumir el 100% del bruto (IC de fee/bruto alcanza 1): el paso es demasiado estrecho.",
+        "39.6% de las filas tienen bruto negativo: revisar contabilidad de lotes (m5).",
+        "La comisión implícita del journal (0.000196) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": null
+    },
+    {
+      "symbol": "AKEUSDT",
+      "n_cycles": 24,
+      "span_days": 0.10171428056502783,
+      "net_total_usdt": 14.730799999999999,
+      "net_per_cycle": 0.6137833333333332,
+      "net_per_cycle_ci": [
+        0.47680958333333323,
+        0.7916808333333331
+      ],
+      "n_effective": 6.62866469623624,
+      "implied_fee_rate_median": 0.00018106446848048912,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 6.234768480909828,
+      "fee_to_gross": 0.006317534527747207,
+      "fee_to_gross_ci": [
+        0.005989282336870852,
+        0.006948630776904836
+      ],
+      "breakeven_fee_rate": 0.028951565311481176,
+      "breakeven_over_fee": 160.84202950822873,
+      "orientation_anomaly_share": 0.0,
+      "inter_arrival_s": {
+        "p25": 0.008283853530883789,
+        "p50": 0.011061906814575195,
+        "p75": 0.3123282194137573
+      },
+      "fill_consistency": null,
+      "fill_consistency_null": null,
+      "fill_consistency_p": null,
+      "hourly_rho_vs_range": null,
+      "hourly_rho_p": null,
+      "fano_hourly": null,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 0.6472537465260646,
+      "findings": [
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "La comisión implícita del journal (0.000181) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": null
+    },
+    {
+      "symbol": "BNBUSDT",
+      "n_cycles": 7,
+      "span_days": 0.26854672880084424,
+      "net_total_usdt": 0.0535,
+      "net_per_cycle": 0.007642857142857143,
+      "net_per_cycle_ci": [
+        0.007600000000000001,
+        0.007671428571428572
+      ],
+      "n_effective": 7.0,
+      "implied_fee_rate_median": 0.0002016158066792175,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 0.15011113997863276,
+      "fee_to_gross": 0.2681258549931546,
+      "fee_to_gross_ci": [
+        0.26702997275206947,
+        0.2688614540466242
+      ],
+      "breakeven_fee_rate": 0.0007514600014597389,
+      "breakeven_over_fee": 4.174777785887438,
+      "orientation_anomaly_share": 0.0,
+      "inter_arrival_s": {
+        "p25": 768.8849734067917,
+        "p50": 1489.5209950208664,
+        "p75": 5418.335185885429
+      },
+      "fill_consistency": 1.0,
+      "fill_consistency_null": 0.4752142857142857,
+      "fill_consistency_p": 0.005997001499250375,
+      "hourly_rho_vs_range": 0.5773502691896258,
+      "hourly_rho_p": 0.1729135432283858,
+      "fano_hourly": 0.4693877551020408,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 0.00018789561879541624,
+      "findings": [
+        "Fills compatibles con el mercado (consistencia 100%, p=0.006).",
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "La comisión implícita del journal (0.000202) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": {
+        "symbol": "BNBUSDT",
+        "days": 61,
+        "fee_used": 0.00018,
+        "step_grid_pct": [
+          0.036,
+          0.0414,
+          0.0477,
+          0.0549,
+          0.0632,
+          0.0728,
+          0.0838,
+          0.0965,
+          0.111,
+          0.1278,
+          0.1471,
+          0.1501,
+          0.1694,
+          0.195,
+          0.2245,
+          0.2584,
+          0.2975,
+          0.3424,
+          0.3942,
+          0.4538,
+          0.5224,
+          0.6014,
+          0.6923,
+          0.797,
+          0.9175,
+          1.0562,
+          1.2159,
+          1.3997,
+          1.6113,
+          1.8549,
+          2.1353,
+          2.4581,
+          2.8297
+        ],
+        "best_step_pct_in_sample": 2.8297,
+        "best_step_pct_median_lodo": 2.8297,
+        "current_step_pct": 0.1501,
+        "oos_mean_pnl_pct_per_line": 0.0222,
+        "oos_mean_ci": [
+          -0.7177,
+          0.6515
+        ],
+        "current_mean_pnl_pct_per_line": -6.3518,
+        "paired_diff_mean_pct": 6.374,
+        "paired_diff_ci": [
+          0.6269,
+          14.7322
+        ],
+        "median_peak_inventory_lines": 1.0,
+        "verdict": "El paso óptimo supera al vigente fuera de muestra (IC > 0): ajustar."
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "n_cycles": 227,
+      "span_days": 2.0694422697055117,
+      "net_total_usdt": 16.7255,
+      "net_per_cycle": 0.0736806167400881,
+      "net_per_cycle_ci": [
+        0.06187973568281939,
+        0.09650528634361233
+      ],
+      "n_effective": 6.071698919850518,
+      "implied_fee_rate_median": 0.0001800514857967568,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 0.2699948146691206,
+      "fee_to_gross": 0.13508440108647224,
+      "fee_to_gross_ci": [
+        0.13098044857905947,
+        0.13442304225647075
+      ],
+      "breakeven_fee_rate": 0.0013078513028684142,
+      "breakeven_over_fee": 7.265840571491189,
+      "orientation_anomaly_share": 0.004405286343612335,
+      "inter_arrival_s": {
+        "p25": 0.004562258720397949,
+        "p50": 0.0049517154693603516,
+        "p75": 0.005584537982940674
+      },
+      "fill_consistency": 0.985981308411215,
+      "fill_consistency_null": 0.972042056074766,
+      "fill_consistency_p": 0.0004997501249375312,
+      "hourly_rho_vs_range": 0.19906904071737577,
+      "hourly_rho_p": 0.4077961019490255,
+      "fano_hourly": 188.21303964757703,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 0.5034293487350874,
+      "findings": [
+        "Fills compatibles con el mercado (consistencia 99%, p=0.000).",
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "0.4% de las filas tienen bruto negativo: revisar contabilidad de lotes (m5).",
+        "La comisión implícita del journal (0.000180) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": {
+        "symbol": "ETHUSDT",
+        "days": 61,
+        "fee_used": 0.00018,
+        "step_grid_pct": [
+          0.036,
+          0.0415,
+          0.0479,
+          0.0553,
+          0.0639,
+          0.0737,
+          0.085,
+          0.0981,
+          0.1132,
+          0.1307,
+          0.1508,
+          0.174,
+          0.2009,
+          0.2318,
+          0.2675,
+          0.27,
+          0.3087,
+          0.3562,
+          0.4111,
+          0.4744,
+          0.5475,
+          0.6318,
+          0.7291,
+          0.8414,
+          0.971,
+          1.1206,
+          1.2932,
+          1.4924,
+          1.7223,
+          1.9875,
+          2.2936,
+          2.6469,
+          3.0546
+        ],
+        "best_step_pct_in_sample": 1.9875,
+        "best_step_pct_median_lodo": 1.9875,
+        "current_step_pct": 0.27,
+        "oos_mean_pnl_pct_per_line": -0.2239,
+        "oos_mean_ci": [
+          -0.8606,
+          0.3174
+        ],
+        "current_mean_pnl_pct_per_line": -2.0814,
+        "paired_diff_mean_pct": 1.8574,
+        "paired_diff_ci": [
+          -1.253,
+          5.1654
+        ],
+        "median_peak_inventory_lines": 1.0,
+        "verdict": "Diferencia no distinguible de 0: conservar el paso vigente; faltan días."
+      }
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "n_cycles": 2687,
+      "span_days": 0.0340958960161165,
+      "net_total_usdt": 32.618500000000004,
+      "net_per_cycle": 0.012139374767398587,
+      "net_per_cycle_ci": [
+        0.01041645794566431,
+        0.013891852437662822
+      ],
+      "n_effective": 9.345278826316303,
+      "implied_fee_rate_median": 0.00017962866512427294,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 0.17586477390623498,
+      "fee_to_gross": 0.1993015781995837,
+      "fee_to_gross_ci": [
+        0.19651706000610025,
+        0.2021640816360054
+      ],
+      "breakeven_fee_rate": 0.0009028067219384281,
+      "breakeven_over_fee": 5.015592899657934,
+      "orientation_anomaly_share": 0.0,
+      "inter_arrival_s": {
+        "p25": 0.0050064921379089355,
+        "p50": 0.005234956741333008,
+        "p75": 0.005633413791656494
+      },
+      "fill_consistency": 0.0011164867882396724,
+      "fill_consistency_null": 0.24964607368812802,
+      "fill_consistency_p": 1.0,
+      "hourly_rho_vs_range": null,
+      "hourly_rho_p": null,
+      "fano_hourly": null,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 0.32677830568157723,
+      "findings": [
+        "Los fills NO se distinguen de precios al azar (consistencia 0% vs nulo 25%, p=1.000): el journal parece simulado. No concluyas edge con estos datos.",
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "La comisión implícita del journal (0.000180) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": null
+    },
+    {
+      "symbol": "INJUSDT",
+      "n_cycles": 20,
+      "span_days": 1.1465298289281352,
+      "net_total_usdt": 0.3631,
+      "net_per_cycle": 0.018154999999999998,
+      "net_per_cycle_ci": [
+        0.013030000000000003,
+        0.024435
+      ],
+      "n_effective": 20.0,
+      "implied_fee_rate_median": 0.00019902564042456996,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 0.3640997646759297,
+      "fee_to_gross": 0.034351314214777974,
+      "fee_to_gross_ci": [
+        -0.1451884418744889,
+        0.1029955841985723
+      ],
+      "breakeven_fee_rate": 0.0016241447791782635,
+      "breakeven_over_fee": 9.023026550990352,
+      "orientation_anomaly_share": 0.2,
+      "inter_arrival_s": {
+        "p25": 18.755364298820496,
+        "p50": 659.5779278278351,
+        "p75": 3120.0808411836624
+      },
+      "fill_consistency": null,
+      "fill_consistency_null": null,
+      "fill_consistency_p": null,
+      "hourly_rho_vs_range": null,
+      "hourly_rho_p": null,
+      "fano_hourly": 1.9785714285714284,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 2.266956571544685,
+      "findings": [
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "20.0% de las filas tienen bruto negativo: revisar contabilidad de lotes (m5).",
+        "La comisión implícita del journal (0.000199) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": null
+    },
+    {
+      "symbol": "JCTUSDT",
+      "n_cycles": 1,
+      "span_days": 0.0,
+      "net_total_usdt": 0.2221,
+      "net_per_cycle": 0.2221,
+      "net_per_cycle_ci": [
+        0.2221,
+        0.2221
+      ],
+      "n_effective": 1.0,
+      "implied_fee_rate_median": 0.0001761513895370144,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 3.7328667249926983,
+      "fee_to_gross": NaN,
+      "fee_to_gross_ci": [
+        NaN,
+        NaN
+      ],
+      "breakeven_fee_rate": 0.01832235900372168,
+      "breakeven_over_fee": 101.79088335400932,
+      "orientation_anomaly_share": 0.0,
+      "inter_arrival_s": {
+        "p25": 0.0,
+        "p50": 0.0,
+        "p75": 0.0
+      },
+      "fill_consistency": null,
+      "fill_consistency_null": null,
+      "fill_consistency_p": null,
+      "hourly_rho_vs_range": null,
+      "hourly_rho_p": null,
+      "fano_hourly": null,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": null,
+      "findings": [
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "La comisión implícita del journal (0.000176) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": null
+    },
+    {
+      "symbol": "LYNUSDT",
+      "n_cycles": 27,
+      "span_days": 0.9176633061910117,
+      "net_total_usdt": 2.017909,
+      "net_per_cycle": 0.07473737037037037,
+      "net_per_cycle_ci": [
+        0.05208553425925926,
+        0.09570978055555553
+      ],
+      "n_effective": 27.0,
+      "implied_fee_rate_median": 0.00019999575230259477,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 1.8526687251874736,
+      "fee_to_gross": 0.027682426181482,
+      "fee_to_gross_ci": [
+        0.023349205011517514,
+        0.03882359773177658
+      ],
+      "breakeven_fee_rate": 0.0072250024856659965,
+      "breakeven_over_fee": 40.13890269814442,
+      "orientation_anomaly_share": 0.1111111111111111,
+      "inter_arrival_s": {
+        "p25": 123.49277728796005,
+        "p50": 842.7140738964081,
+        "p75": 4390.429692149162
+      },
+      "fill_consistency": 0.9259259259259259,
+      "fill_consistency_null": 0.3832037037037037,
+      "fill_consistency_p": 0.0004997501249375312,
+      "hourly_rho_vs_range": 0.6753272132231798,
+      "hourly_rho_p": 0.005497251374312844,
+      "fano_hourly": 4.154882154882155,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 2.6050626104546994,
+      "findings": [
+        "Fills compatibles con el mercado (consistencia 93%, p=0.000).",
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "11.1% de las filas tienen bruto negativo: revisar contabilidad de lotes (m5).",
+        "La comisión implícita del journal (0.000200) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa.",
+        "Los cruces siguen a la volatilidad horaria (rho=+0.68): el modelo path/(2*paso) es válido."
+      ],
+      "step_opt": null
+    },
+    {
+      "symbol": "ONUSDT",
+      "n_cycles": 1,
+      "span_days": 0.0,
+      "net_total_usdt": 0.399143,
+      "net_per_cycle": 0.399143,
+      "net_per_cycle_ci": [
+        0.399143,
+        0.399143
+      ],
+      "n_effective": 1.0,
+      "implied_fee_rate_median": 0.00020001505570612252,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 6.23806492679822,
+      "fee_to_gross": NaN,
+      "fee_to_gross_ci": [
+        NaN,
+        NaN
+      ],
+      "breakeven_fee_rate": 0.030246913580246927,
+      "breakeven_over_fee": 168.0384087791496,
+      "orientation_anomaly_share": 0.0,
+      "inter_arrival_s": {
+        "p25": 0.0,
+        "p50": 0.0,
+        "p75": 0.0
+      },
+      "fill_consistency": null,
+      "fill_consistency_null": null,
+      "fill_consistency_p": null,
+      "hourly_rho_vs_range": null,
+      "hourly_rho_p": null,
+      "fano_hourly": null,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": null,
+      "findings": [
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "La comisión implícita del journal (0.000200) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": null
+    },
+    {
+      "symbol": "SKYAIUSDT",
+      "n_cycles": 15,
+      "span_days": 0.6848728100845107,
+      "net_total_usdt": 1.846395,
+      "net_per_cycle": 0.123093,
+      "net_per_cycle_ci": [
+        0.12224566666666667,
+        0.12383233333333334
+      ],
+      "n_effective": 15.0,
+      "implied_fee_rate_median": 0.00020000897365536353,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 2.204635387224409,
+      "fee_to_gross": 0.01830318690783772,
+      "fee_to_gross_ci": [
+        0.018267964408466772,
+        0.01833634318664083
+      ],
+      "breakeven_fee_rate": 0.010927367360960777,
+      "breakeven_over_fee": 60.707596449782095,
+      "orientation_anomaly_share": 0.0,
+      "inter_arrival_s": {
+        "p25": 239.6954095363617,
+        "p50": 3434.7880498170853,
+        "p75": 6298.628937423229
+      },
+      "fill_consistency": 0.8,
+      "fill_consistency_null": 0.5271333333333333,
+      "fill_consistency_p": 0.004497751124437781,
+      "hourly_rho_vs_range": -0.024078566516544362,
+      "hourly_rho_p": 0.9495252373813093,
+      "fano_hourly": 0.8823529411764706,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 0.0007099003018002699,
+      "findings": [
+        "Fills compatibles con el mercado (consistencia 80%, p=0.004).",
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "La comisión implícita del journal (0.000200) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": null
+    },
+    {
+      "symbol": "UAIUSDT",
+      "n_cycles": 11,
+      "span_days": 0.8484697985980246,
+      "net_total_usdt": 2.7260329999999993,
+      "net_per_cycle": 0.24782118181818175,
+      "net_per_cycle_ci": [
+        0.21003699772727272,
+        0.2985510227272726
+      ],
+      "n_effective": 11.0,
+      "implied_fee_rate_median": 0.0001999872270931322,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 4.783599088838264,
+      "fee_to_gross": 0.007885504239910203,
+      "fee_to_gross_ci": [
+        0.006826894719693518,
+        0.008582647029043763
+      ],
+      "breakeven_fee_rate": 0.025362175034729116,
+      "breakeven_over_fee": 140.90097241516176,
+      "orientation_anomaly_share": 0.0,
+      "inter_arrival_s": {
+        "p25": 2781.0725769400597,
+        "p50": 5541.521733880043,
+        "p75": 8617.927097201347
+      },
+      "fill_consistency": null,
+      "fill_consistency_null": null,
+      "fill_consistency_p": null,
+      "hourly_rho_vs_range": null,
+      "hourly_rho_p": null,
+      "fano_hourly": 0.9047619047619048,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 0.41752349110022574,
+      "findings": [
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "La comisión implícita del journal (0.000200) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": null
+    },
+    {
+      "symbol": "XRPUSDT",
+      "n_cycles": 4,
+      "span_days": 0.03708416320935443,
+      "net_total_usdt": 0.0443,
+      "net_per_cycle": 0.011075,
+      "net_per_cycle_ci": [
+        0.010825,
+        0.0112
+      ],
+      "n_effective": 4.0,
+      "implied_fee_rate_median": 0.00019609413973763282,
+      "configured_fee_rate": 0.00018,
+      "realized_step_pct_median": 0.258520805193897,
+      "fee_to_gross": 0.15393430099312613,
+      "fee_to_gross_ci": [
+        0.15151515151513664,
+        0.15889665889664614
+      ],
+      "breakeven_fee_rate": 0.0012834201529319164,
+      "breakeven_over_fee": 7.130111960732869,
+      "orientation_anomaly_share": 0.0,
+      "inter_arrival_s": {
+        "p25": 203.8772245645523,
+        "p50": 294.2185845375061,
+        "p75": 1545.2679183483124
+      },
+      "fill_consistency": null,
+      "fill_consistency_null": null,
+      "fill_consistency_p": null,
+      "hourly_rho_vs_range": null,
+      "hourly_rho_p": null,
+      "fano_hourly": null,
+      "fill_efficiency": null,
+      "fill_efficiency_ci": null,
+      "cycles_needed_for_significance": 0.0019574412204363487,
+      "findings": [
+        "Edge neto por ciclo demostrado (IC > 0), condicionado a que los fills sean reales.",
+        "La comisión implícita del journal (0.000196) difiere de la configurada (0.000180): el PnL guardado usó otra tarifa."
+      ],
+      "step_opt": {
+        "symbol": "XRPUSDT",
+        "days": 61,
+        "fee_used": 0.00018,
+        "step_grid_pct": [
+          0.036,
+          0.042,
+          0.0491,
+          0.0573,
+          0.067,
+          0.0782,
+          0.0913,
+          0.1067,
+          0.1246,
+          0.1455,
+          0.1699,
+          0.1984,
+          0.2317,
+          0.2585,
+          0.2706,
+          0.316,
+          0.369,
+          0.431,
+          0.5033,
+          0.5878,
+          0.6865,
+          0.8017,
+          0.9363,
+          1.0934,
+          1.2769,
+          1.4912,
+          1.7415,
+          2.0338,
+          2.3752,
+          2.7739,
+          3.2395,
+          3.7832,
+          4.4182
+        ],
+        "best_step_pct_in_sample": 2.7739,
+        "best_step_pct_median_lodo": 2.7739,
+        "current_step_pct": 0.2585,
+        "oos_mean_pnl_pct_per_line": -0.088,
+        "oos_mean_ci": [
+          -1.1765,
+          0.8589
+        ],
+        "current_mean_pnl_pct_per_line": -7.4947,
+        "paired_diff_mean_pct": 7.4067,
+        "paired_diff_ci": [
+          -1.0613,
+          17.7146
+        ],
+        "median_peak_inventory_lines": 1.0,
+        "verdict": "Diferencia no distinguible de 0: conservar el paso vigente; faltan días."
+      }
+    }
+  ]
+}
