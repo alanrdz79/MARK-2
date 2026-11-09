@@ -1,0 +1,13 @@
+# Credenciales y entorno
+.env
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Bases de datos locales SQLite y archivos temporales
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
