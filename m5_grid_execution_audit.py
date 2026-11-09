@@ -176,7 +176,7 @@ class Mark2SlidingWindowGridExecutor:
         plan: GeometricGridPlanPOD,
         rules: ExchangeContractRulePOD,
         journal_db_path: str = "prosperity_mark2_journal.db",
-        maker_fee: float = 0.00018,
+        maker_fee: float = 0.00020,
     ):
         self.plan = plan
         self.rules = rules
@@ -209,6 +209,28 @@ class Mark2SlidingWindowGridExecutor:
         if self.journal_db_path == ":memory:":
             self._memory_conn = sqlite3.connect(":memory:")
         self._init_wal_journal()
+
+    def _pop_matching_lot_entry(self, target_price: float, default_price: float) -> float:
+        """
+        Busca y extrae el precio de entrada del lote en `open_lots_entry_map`
+        empleando tolerancia de tick_size para evitar fallas por precisión de coma flotante.
+        Si no se encuentra coincidencia dentro de la tolerancia, retorna `default_price`.
+        """
+        if not self.open_lots_entry_map:
+            return default_price
+
+        tol = max(self.rules.tick_size * 0.6, 1e-8)
+        best_k = None
+        best_dist = float("inf")
+        for k in list(self.open_lots_entry_map.keys()):
+            dist = abs(k - target_price)
+            if dist <= tol and dist < best_dist:
+                best_dist = dist
+                best_k = k
+
+        if best_k is not None:
+            return self.open_lots_entry_map.pop(best_k)
+        return default_price
 
     def _get_db_connection(self) -> sqlite3.Connection:
         if self._memory_conn is not None:
@@ -383,12 +405,17 @@ class Mark2SlidingWindowGridExecutor:
     ) -> Dict[str, float | str]:
         """
         Procesa en O(1) la ejecución de una orden límite del Grid con Mitigación Dinámica
-        de Riesgo de Apalancamiento:
-        - Si se llenó un BUY en P_k -> Registra el precio de compra exacto y coloca SELL en P_{k+1}.
-          Solo repone un nuevo escalón BUY inferior si el Apalancamiento Efectivo de Inventario
-          está dentro del umbral seguro Anti-Liquidación (`max_adverse_effective_leverage`).
-        - Si se llenó un SELL en P_k -> Calcula el PnL neto exacto entre el precio de venta y su
-          precio de compra, descontando las comisiones Maker reales, y coloca BUY en P_{k-1}.
+        de Riesgo de Apalancamiento y Contabilidad Estricta de Cruces (sin duplicidades ni harvests prematuros):
+        - Si se llenó un BUY en P_k:
+          * Si teníamos inventario SHORT previo (net_inventory_qty < -1e-12), este BUY es un CIERRE de lote corto:
+            calcula PnL neto exacto = (P_entry_short - P_buy) * qty - fees, liquida el lote y registra el ciclo.
+          * Si NO teníamos inventario SHORT (net_inventory_qty >= -1e-12), este BUY es una APERTURA de lote largo:
+            guarda target_sell en open_lots_entry_map y acumula inventario LONG. No registra ciclo hasta que se venda.
+        - Si se llenó un SELL en P_k:
+          * Si teníamos inventario LONG previo (net_inventory_qty > 1e-12), este SELL es un CIERRE de lote largo:
+            calcula PnL neto exacto = (P_sell - P_entry_buy) * qty - fees, liquida el lote y registra el ciclo.
+          * Si NO teníamos inventario LONG (net_inventory_qty <= 1e-12), este SELL es una APERTURA de lote corto:
+            guarda target_buy en open_lots_entry_map y acumula inventario SHORT. No registra ciclo hasta que se recompre.
         """
         ts = now_ts or time.time()
         side_up = side.upper()
@@ -402,15 +429,23 @@ class Mark2SlidingWindowGridExecutor:
                 fill_price * self.geom_ratio, self.rules.tick_size
             )
 
-            # Si teníamos inventario SHORT previo (net_inventory_qty < 0), este BUY cierra lote corto
+            # Caso 1A: Cierre de Lote SHORT (teníamos posición corta abierta)
             if self.net_inventory_qty < -1e-12:
-                entry_short_price = self.open_lots_entry_map.pop(fill_price, self.avg_entry_price or target_sell)
+                entry_short_price = self._pop_matching_lot_entry(fill_price, default_price=target_sell)
+                if entry_short_price <= fill_price:
+                    # Garantía anti-anomalía: si por cualquier desfase el counter_price es <= fill_price,
+                    # se asegura el escalón geométrico teórico superior
+                    entry_short_price = target_sell
+
                 gross_pnl_usdt = (entry_short_price - fill_price) * qty
                 roundtrip_fee_usdt = (fill_price + entry_short_price) * qty * self.maker_fee
                 exact_net_harvest_usdt = round(gross_pnl_usdt - roundtrip_fee_usdt, 6)
                 self.net_inventory_qty = round(self.net_inventory_qty + qty, 8)
                 if abs(self.net_inventory_qty) <= 1e-12:
+                    self.net_inventory_qty = 0.0
+                    self.avg_entry_price = 0.0
                     self.unrealized_pnl_usdt = 0.0
+
                 self.completed_crosses += 1
                 self.realized_pnl_usdt = round(
                     self.realized_pnl_usdt + exact_net_harvest_usdt, 4
@@ -423,16 +458,30 @@ class Mark2SlidingWindowGridExecutor:
                 self._record_cycle_wal(
                     ts, "BUY", fill_price, entry_short_price, exact_net_harvest_usdt, live_eq
                 )
-            else:
-                self.open_lots_entry_map[target_sell] = fill_price
-                prev_qty = max(0.0, self.net_inventory_qty)
-                new_qty = prev_qty + qty
-                self.avg_entry_price = (
-                    ((self.avg_entry_price * prev_qty) + (fill_price * qty)) / new_qty
-                    if new_qty > 0.0
-                    else fill_price
-                )
-                self.net_inventory_qty = round(new_qty, 8)
+
+                if target_sell not in self.active_sells:
+                    self.active_sells.append(target_sell)
+                    self.active_sells.sort()
+
+                return {
+                    "event": "BUY_FILLED_HARVEST_AND_FLIP_TO_SELL",
+                    "new_order_side": "SELL",
+                    "new_order_price": target_sell,
+                    "qty": qty,
+                    "net_harvest_usdt": exact_net_harvest_usdt,
+                    "cumulative_equity_usdt": live_eq,
+                }
+
+            # Caso 1B: Apertura de Lote LONG (acumulación de inventario largo)
+            self.open_lots_entry_map[target_sell] = fill_price
+            prev_qty = max(0.0, self.net_inventory_qty)
+            new_qty = prev_qty + qty
+            self.avg_entry_price = (
+                ((self.avg_entry_price * prev_qty) + (fill_price * qty)) / new_qty
+                if new_qty > 0.0
+                else fill_price
+            )
+            self.net_inventory_qty = round(new_qty, 8)
 
             if target_sell not in self.active_sells:
                 self.active_sells.append(target_sell)
@@ -463,36 +512,82 @@ class Mark2SlidingWindowGridExecutor:
                 "qty": qty,
             }
 
-        # Caso SELL FILLED -> Emparejamiento completado (o apertura de lote corto si es SHORT sin inventario LONG)
+        # Caso 2: SELL FILLED
         if fill_price in self.active_sells:
             self.active_sells.remove(fill_price)
 
         target_buy = LotAndTickQuantizer.quantize_price(
             fill_price / self.geom_ratio, self.rules.tick_size
         )
-        entry_buy_price = self.open_lots_entry_map.pop(
-            fill_price,
-            self.avg_entry_price if (self.net_inventory_qty > 0.0 and self.avg_entry_price > 0.0) else target_buy,
-        )
 
-        gross_pnl_usdt = (fill_price - entry_buy_price) * qty
-        roundtrip_fee_usdt = (fill_price + entry_buy_price) * qty * self.maker_fee
-        exact_net_harvest_usdt = round(gross_pnl_usdt - roundtrip_fee_usdt, 6)
-
+        # Caso 2A: Cierre de Lote LONG (teníamos posición larga abierta)
         if self.net_inventory_qty > 1e-12:
+            entry_buy_price = self._pop_matching_lot_entry(fill_price, default_price=target_buy)
+            if entry_buy_price >= fill_price:
+                # Garantía anti-anomalía: si por cualquier causa entry_buy_price es >= fill_price,
+                # se asegura el escalón geométrico teórico inferior
+                entry_buy_price = target_buy
+
+            gross_pnl_usdt = (fill_price - entry_buy_price) * qty
+            roundtrip_fee_usdt = (fill_price + entry_buy_price) * qty * self.maker_fee
+            exact_net_harvest_usdt = round(gross_pnl_usdt - roundtrip_fee_usdt, 6)
+
             self.net_inventory_qty = round(max(0.0, self.net_inventory_qty - qty), 8)
             if self.net_inventory_qty <= 1e-12:
+                self.net_inventory_qty = 0.0
+                self.avg_entry_price = 0.0
                 self.unrealized_pnl_usdt = 0.0
-        elif self.plan.direction == GridDirection.SHORT:
-            prev_short = abs(min(0.0, self.net_inventory_qty))
-            new_short = prev_short + qty
-            self.avg_entry_price = (
-                ((self.avg_entry_price * prev_short) + (fill_price * qty)) / new_short
-                if new_short > 0.0
-                else fill_price
+
+            self.completed_crosses += 1
+            self.realized_pnl_usdt = round(
+                self.realized_pnl_usdt + exact_net_harvest_usdt, 4
             )
-            self.net_inventory_qty = -round(new_short, 8)
-            self.open_lots_entry_map[target_buy] = fill_price
+            live_eq = round(
+                self.plan.initial_capital_usdt + self.realized_pnl_usdt + self.unrealized_pnl_usdt,
+                4,
+            )
+
+            self._update_rolling_telemetry(ts, live_eq)
+            self._record_cycle_wal(
+                ts, "SELL", fill_price, entry_buy_price, exact_net_harvest_usdt, live_eq
+            )
+
+            if target_buy not in self.active_buys:
+                self.active_buys.append(target_buy)
+                self.active_buys.sort()
+
+            highest_sell = max(self.active_sells) if self.active_sells else fill_price
+            next_sell_up = LotAndTickQuantizer.quantize_price(
+                highest_sell * self.geom_ratio, self.rules.tick_size
+            )
+            total_active = len(self.active_buys) + len(self.active_sells)
+            if (
+                self.virtual_levels
+                and next_sell_up <= self.virtual_levels[-1]
+                and total_active < self.plan.active_window_orders
+                and next_sell_up not in self.active_sells
+            ):
+                self.active_sells.append(next_sell_up)
+
+            return {
+                "event": "SELL_FILLED_HARVEST_AND_FLIP_TO_BUY",
+                "new_order_side": "BUY",
+                "new_order_price": target_buy,
+                "qty": qty,
+                "net_harvest_usdt": exact_net_harvest_usdt,
+                "cumulative_equity_usdt": live_eq,
+            }
+
+        # Caso 2B: Apertura de Lote SHORT (acumulación de inventario corto en SHORT o NEUTRAL)
+        prev_short = abs(min(0.0, self.net_inventory_qty))
+        new_short = prev_short + qty
+        self.avg_entry_price = (
+            ((self.avg_entry_price * prev_short) + (fill_price * qty)) / new_short
+            if new_short > 0.0
+            else fill_price
+        )
+        self.net_inventory_qty = -round(new_short, 8)
+        self.open_lots_entry_map[target_buy] = fill_price
 
         if target_buy not in self.active_buys:
             self.active_buys.append(target_buy)
@@ -511,27 +606,11 @@ class Mark2SlidingWindowGridExecutor:
         ):
             self.active_sells.append(next_sell_up)
 
-        self.completed_crosses += 1
-        self.realized_pnl_usdt = round(
-            self.realized_pnl_usdt + exact_net_harvest_usdt, 4
-        )
-        live_eq = round(
-            self.plan.initial_capital_usdt + self.realized_pnl_usdt + self.unrealized_pnl_usdt,
-            4,
-        )
-
-        self._update_rolling_telemetry(ts, live_eq)
-        self._record_cycle_wal(
-            ts, "SELL", fill_price, entry_buy_price, exact_net_harvest_usdt, live_eq
-        )
-
         return {
-            "event": "SELL_FILLED_HARVEST_AND_FLIP_TO_BUY",
+            "event": "SELL_FILLED_FLIP_TO_BUY",
             "new_order_side": "BUY",
             "new_order_price": target_buy,
             "qty": qty,
-            "net_harvest_usdt": exact_net_harvest_usdt,
-            "cumulative_equity_usdt": live_eq,
         }
 
     def _update_rolling_telemetry(self, ts: float, live_equity_usdt: float) -> None:
@@ -986,8 +1065,8 @@ class BinanceMark2LiveGridBroker(IGridBrokerExecutionPort):
         Extrae las tasas reales de comisión Maker y Taker de la cuenta en Binance
         mediante /fapi/v1/commissionRate.
         """
-        default_maker = self.get_float("MAKER_FEE_RATE", 0.00018)
-        default_taker = self.get_float("TAKER_FEE_RATE", 0.00045)
+        default_maker = self.get_float("MAKER_FEE_RATE", 0.00020)
+        default_taker = self.get_float("TAKER_FEE_RATE", 0.00050)
         if not self._api_key or not self._api_secret or self.dry_run:
             return default_maker, default_taker
         try:

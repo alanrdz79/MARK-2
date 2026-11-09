@@ -161,8 +161,8 @@ class ProsperityMark2Orchestrator:
             self.m5_broker.get_str("ENABLE_SUPER_ROI_TRAIL", "FALSE").upper() == "TRUE"
         )
 
-        maker_fee = self.m5_broker.get_float("MAKER_FEE_RATE", 0.00018)
-        taker_fee = self.m5_broker.get_float("TAKER_FEE_RATE", 0.00045)
+        maker_fee = self.m5_broker.get_float("MAKER_FEE_RATE", 0.00020)
+        taker_fee = self.m5_broker.get_float("TAKER_FEE_RATE", 0.00050)
         max_corr_rho = self.m5_broker.get_float("MAX_CORRELATION_RHO", 0.70)
         max_daily_dd = self.m5_broker.get_float("MAX_DAILY_DRAWDOWN_PCT", 0.05)
         max_p99_ms = self.m5_broker.get_float("MAX_P99_LATENCY_MS", 180.0)

@@ -77,8 +77,8 @@ class Mark2GridDecisionOrchestrator:
 
     def __init__(
         self,
-        maker_fee: float = 0.00018,
-        taker_fee: float = 0.00045,
+        maker_fee: float = 0.00020,
+        taker_fee: float = 0.00050,
         reserve_ratio: float = 0.25,
     ):
         self.maker_fee = maker_fee

@@ -76,7 +76,7 @@ class AlphaHighROIGridCalibrator:
     ROI y PnL esperado Diario y a 30 Días de cada mercado y los Días Estimados.
     """
 
-    def __init__(self, maker_fee: float = 0.00018):
+    def __init__(self, maker_fee: float = 0.00020):
         self.maker_fee = maker_fee
 
     def calculate_binance_min_investment(

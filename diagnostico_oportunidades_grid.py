@@ -591,7 +591,7 @@ def analyze_symbol(
         f.append("La comisión puede consumir el 100% del bruto (IC de fee/bruto alcanza 1): el paso es demasiado estrecho.")
     if rep.orientation_anomaly_share > 0:
         f.append(f"{rep.orientation_anomaly_share:.1%} de las filas tienen bruto negativo: revisar contabilidad de lotes (m5).")
-    if configured_fee > 0 and abs(rep.implied_fee_rate_median - configured_fee) > 1e-12:
+    if configured_fee > 0 and abs(rep.implied_fee_rate_median - configured_fee) > 5e-6:
         f.append(
             f"La comisión implícita del journal ({rep.implied_fee_rate_median:.6f}) difiere de la configurada "
             f"({configured_fee:.6f}): el PnL guardado usó otra tarifa."
