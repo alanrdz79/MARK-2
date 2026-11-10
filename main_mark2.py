@@ -653,6 +653,7 @@ class ProsperityMark2Orchestrator:
                 rules=rules,
                 journal_db_path=self.m5_broker.db_path,
             )
+            executor.record_session_opened_wal()
             self.active_bots[cand.symbol] = LiveGridBotContext(
                 symbol=cand.symbol,
                 rules=rules,
@@ -668,6 +669,172 @@ class ProsperityMark2Orchestrator:
                 self.format_binance_bot_details_card(
                     plan=plan, matched_24h=0, matched_total=0, mdd_7d_pct=0.0
                 )
+            )
+
+    async def reconcile_and_recover_active_exchange_bots(self, session: Optional[Any]) -> None:
+        """
+        Protocolo Soberano de Recuperación ante Fallos y Reinicios (Crash Recovery):
+        Verifica en Binance si existen posiciones vivas abiertas o bots que quedaron
+        activos antes de un apagón o reinicio imprevisto de la máquina.
+        Para cada posición activa detectada:
+        1. Rescata o descarga las reglas de contrato y telemetría de mercado.
+        2. Reconstruye el contexto del Bot Grid y su ejecutor en memoria.
+        3. El ejecutor rehidrata su histórico de cruces y PnL realizado desde SQLite WAL.
+        4. Concilia el inventario real (positionAmt) y precio promedio de entrada de Binance.
+        5. Sincroniza la ventana activa de órdenes límite (cancelando órdenes huérfanas desfasadas
+           y colocando los escalones correctos).
+        6. Asegura que los brackets de protección (SL y TP) en Binance estén armados.
+        7. Registra el bot recuperado en self.active_bots y en el guardián de correlación de M4.
+        """
+        active_recovered_symbols: List[str] = []
+
+        # 1. Recuperar posiciones reales abiertas en Binance (Live / Sandbox)
+        if session is not None and not self.m5_broker.dry_run:
+            try:
+                live_positions = await self.m5_broker.fetch_live_positions_map(session=session)
+                for sym, pos in live_positions.items():
+                    pos_amt = float(pos.get("positionAmt", 0.0))
+                    if abs(pos_amt) > 1e-12:
+                        active_recovered_symbols.append(sym)
+            except Exception as exc:
+                logger.error("⚠️ [Crash Recovery Error consultando Binance positionRisk]: %s", exc)
+
+        # 2. Recuperar sesiones activas en SQLite WAL si no estaban cerradas
+        db_file = str(self.m5_broker.db_path)
+        if os.path.exists(db_file):
+            try:
+                with sqlite3.connect(db_file, timeout=5.0) as conn:
+                    rows = conn.execute(
+                        """
+                        SELECT symbol FROM mark2_bot_sessions
+                        WHERE status = 'ACTIVE' AND (closed_at IS NULL OR closed_at = '')
+                        ORDER BY session_id DESC
+                        """
+                    ).fetchall()
+                    for r in rows:
+                        sym = str(r[0]).upper()
+                        if sym not in active_recovered_symbols:
+                            active_recovered_symbols.append(sym)
+            except Exception as exc:
+                logger.debug("Aviso consultando mark2_bot_sessions para Crash Recovery: %s", exc)
+
+        if not active_recovered_symbols:
+            logger.info("ℹ️ [Crash Recovery] No se detectaron posiciones ni bots previos huérfanos. Listo para nuevos despliegues.")
+            return
+
+        logger.info(
+            "🛡️ [Crash Recovery] Detectados %d bots/posiciones para rehidratar tras reinicio: %s",
+            len(active_recovered_symbols),
+            ", ".join(active_recovered_symbols),
+        )
+
+        phase_profile = self.m4_treasury.resolve_phase_behavior_profile()
+        max_slots = min(self.max_concurrent_bots, phase_profile.max_concurrent_bots)
+
+        for sym in active_recovered_symbols:
+            if len(self.active_bots) >= max_slots:
+                logger.warning("⚠️ [Crash Recovery] Cupo máximo de bots alcanzado (%d/%d).", len(self.active_bots), max_slots)
+                break
+
+            # A. Reglas de contrato
+            rules = self.rules_catalog.get(sym)
+            if rules is None and session is not None:
+                rules = await self.m5_broker.fetch_symbol_contract_rules(sym, session=session)
+                if rules is not None:
+                    self.rules_catalog[sym] = rules
+
+            if rules is None:
+                logger.warning("⚠️ [Crash Recovery] No se encontraron reglas para %s; se omite.", sym)
+                continue
+
+            # B. Telemetría del mercado
+            tel = self.telemetry_catalog.get(sym)
+            if tel is None:
+                mark_p = 1.0
+                if session is not None:
+                    bt = await self._safe_http_get_json(
+                        session, f"{self.PUBLIC_MAINNET_FAPI}/fapi/v1/ticker/bookTicker", {"symbol": sym}
+                    )
+                    if isinstance(bt, dict) and "bidPrice" in bt:
+                        mark_p = (float(bt["bidPrice"]) + float(bt["askPrice"])) * 0.5
+                tel = Market3VTelemetryPOD(
+                    symbol=sym,
+                    mark_price=mark_p,
+                    volume_24h_quote=50_000_000.0,
+                    quote_obi_l1=0.0,
+                    natr_pct=1.5,
+                    mfe_q85_pct=2.5,
+                    mae_q85_pct=1.0,
+                    hursta_1h=0.5,
+                    funding_rate=0.0001,
+                    spread_bps=2.0,
+                    realized_vol_1h=0.015,
+                )
+                self.telemetry_catalog[sym] = tel
+
+            cand_returns = self.returns_catalog.get(sym, np.zeros(30))
+
+            # C. Consultar posición exacta reportada en Binance
+            live_pos = self.m5_broker.live_position_amt_cache.get(sym, 0.0)
+            direction = GridDirection.LONG if live_pos > 0.0 else (GridDirection.SHORT if live_pos < 0.0 else GridDirection.NEUTRAL)
+
+            # D. Reconstruir plan adaptado
+            assigned_cap = max(self.bot_min_usd, abs(live_pos) * tel.mark_price / max(1, self.max_leverage_cap))
+            target_eq = round(assigned_cap * (1.0 + phase_profile.target_roi_per_bot_pct / 100.0), 2)
+            plan = self.m3_brain.build_geometric_grid_6_to_18(
+                rules=rules,
+                tel=tel,
+                safety_tier=MarketSafetyTier.ESTABLES,
+                initial_capital_usdt=round(assigned_cap, 2),
+                current_equity_usdt=round(assigned_cap, 2),
+                target_equity_usdt=target_eq,
+            )
+
+            # E. Instanciar ejecutor (rehidrata automáticamente cruces previos desde SQLite WAL)
+            executor = Mark2SlidingWindowGridExecutor(
+                plan=plan,
+                rules=rules,
+                journal_db_path=self.m5_broker.db_path,
+                maker_fee=self.m5_broker.get_float("MAKER_FEE_RATE", 0.00020),
+            )
+            executor.net_inventory_qty = round(live_pos, 8)
+
+            # F. En modo Live / Sandbox, sincronizar órdenes y brackets inmediatamente
+            if session is not None and not self.m5_broker.dry_run:
+                await self.m5_broker.sync_active_limit_window(
+                    symbol=sym,
+                    buy_levels=plan.active_buy_window,
+                    sell_levels=plan.active_sell_window,
+                    qty=plan.qty_per_line,
+                    rules=rules,
+                    session=session,
+                )
+                await self.m5_broker.place_global_protection_brackets(
+                    symbol=sym,
+                    direction=plan.direction,
+                    sl_price=plan.sl_price,
+                    tp_price=plan.tp_price,
+                    current_mark_price=tel.mark_price,
+                    rules=rules,
+                    session=session,
+                )
+
+            self.active_bots[sym] = LiveGridBotContext(
+                symbol=sym,
+                rules=rules,
+                telemetry=tel,
+                executor=executor,
+                log_returns=cand_returns,
+            )
+            self.m4_treasury.correlation_guard.register_active_bot(sym, plan.direction)
+
+            t_24h, t_tot = executor.get_matched_trades_24h_and_total()
+            logger.info(
+                "✅ [Crash Recovery OK] Bot %s REHIDRATADO: Posición viva=%.4f | Cruces WAL prev=%d | PnL realizado=+$%.4f USD",
+                sym,
+                live_pos,
+                t_tot,
+                executor.realized_pnl_usdt,
             )
 
     # ------------------------------------------------------------------------
@@ -703,6 +870,7 @@ class ProsperityMark2Orchestrator:
         )
 
         await self.sync_universe_and_telemetry(session)
+        await self.reconcile_and_recover_active_exchange_bots(session)
         await self.deploy_eligible_grid_bots(session)
 
     async def grid_hot_path_matching_loop(self, session: Optional[Any]) -> None:

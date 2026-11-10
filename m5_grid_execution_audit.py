@@ -739,6 +739,43 @@ class Mark2SlidingWindowGridExecutor:
             if self._memory_conn is None:
                 conn.close()
 
+    def record_session_opened_wal(self) -> int:
+        """
+        Registra la apertura de una sesión activa de Bot Grid en la tabla `mark2_bot_sessions`.
+        Permite que el sistema reconozca sesiones en curso para recuperación ante caídas o reinicios.
+        """
+        opened_iso = datetime.datetime.fromtimestamp(
+            self.start_timestamp_utc, tz=datetime.timezone.utc
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        init_cap = max(0.01, float(self.plan.initial_capital_usdt))
+
+        conn = self._get_db_connection()
+        try:
+            cur = conn.execute(
+                """
+                INSERT INTO mark2_bot_sessions (
+                    opened_at, closed_at, symbol, direction, leverage,
+                    initial_capital_usdt, final_equity_usdt, net_pnl_usdt,
+                    roi_pct, total_crosses, trailing_shifts, mdd_7d_pct,
+                    status, close_reason
+                ) VALUES (?, NULL, ?, ?, ?, ?, ?, 0.0, 0.0, ?, 0, 0.0, 'ACTIVE', 'RUNNING')
+                """,
+                (
+                    opened_iso,
+                    self.plan.symbol,
+                    self.plan.direction.value,
+                    int(self.plan.leverage),
+                    round(init_cap, 4),
+                    round(init_cap, 4),
+                    int(self.completed_crosses),
+                ),
+            )
+            conn.commit()
+            return int(cur.lastrowid or 0)
+        finally:
+            if self._memory_conn is None:
+                conn.close()
+
     def record_session_closed_wal(
         self,
         close_reason: str,
@@ -747,7 +784,8 @@ class Mark2SlidingWindowGridExecutor:
     ) -> int:
         """
         Registra el cierre de la sesión de un Bot Grid en la tabla `mark2_bot_sessions`
-        de SQLite WAL (`prosperity_mark2_journal.db`).
+        de SQLite WAL (`prosperity_mark2_journal.db`), actualizando la sesión activa previa
+        o insertando una nueva si no existía registro previo.
         """
         net_pnl = (
             round(float(final_net_pnl), 4)
@@ -769,20 +807,18 @@ class Mark2SlidingWindowGridExecutor:
         try:
             cur = conn.execute(
                 """
-                INSERT INTO mark2_bot_sessions (
-                    opened_at, closed_at, symbol, direction, leverage,
-                    initial_capital_usdt, final_equity_usdt, net_pnl_usdt,
-                    roi_pct, total_crosses, trailing_shifts, mdd_7d_pct,
-                    status, close_reason
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                UPDATE mark2_bot_sessions
+                SET closed_at = ?, final_equity_usdt = ?, net_pnl_usdt = ?,
+                    roi_pct = ?, total_crosses = ?, trailing_shifts = ?,
+                    mdd_7d_pct = ?, status = ?, close_reason = ?
+                WHERE session_id = (
+                    SELECT session_id FROM mark2_bot_sessions
+                    WHERE symbol = ? AND close_reason IN ('RUNNING', 'ACTIVE')
+                    ORDER BY session_id DESC LIMIT 1
+                )
                 """,
                 (
-                    opened_iso,
                     closed_iso,
-                    self.plan.symbol,
-                    self.plan.direction.value,
-                    int(self.plan.leverage),
-                    round(init_cap, 4),
                     final_eq,
                     net_pnl,
                     roi_pct,
@@ -791,8 +827,36 @@ class Mark2SlidingWindowGridExecutor:
                     round(mdd_7d, 4),
                     status,
                     close_reason,
+                    self.plan.symbol,
                 ),
             )
+            if cur.rowcount == 0:
+                cur = conn.execute(
+                    """
+                    INSERT INTO mark2_bot_sessions (
+                        opened_at, closed_at, symbol, direction, leverage,
+                        initial_capital_usdt, final_equity_usdt, net_pnl_usdt,
+                        roi_pct, total_crosses, trailing_shifts, mdd_7d_pct,
+                        status, close_reason
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        opened_iso,
+                        closed_iso,
+                        self.plan.symbol,
+                        self.plan.direction.value,
+                        int(self.plan.leverage),
+                        round(init_cap, 4),
+                        final_eq,
+                        net_pnl,
+                        roi_pct,
+                        int(self.completed_crosses),
+                        int(self.trailing_shifts_count),
+                        round(mdd_7d, 4),
+                        status,
+                        close_reason,
+                    ),
+                )
             conn.commit()
             return int(cur.lastrowid or 0)
         finally:
